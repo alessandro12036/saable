@@ -1,5 +1,6 @@
 # TODO: add comparison mechanism
 # TODO: add mean (sd) option for continuous
+# TODO: at the moment the only way to add labels is to also include the factors. Cumbersome for binary variables
 
 library(glue)
 library(gt)
