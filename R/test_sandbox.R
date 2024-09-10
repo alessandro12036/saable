@@ -4,6 +4,7 @@ library(readr)
 source("R/summ_table_maker.R")
 source("R/get_var_type.R")
 
+
 df <- read_csv2("../../Spallanzani/lets_test/data/preprocessed/final_df.csv") %>%
   rename(id=`__id`,
          conoscenza_u_u=u_u,

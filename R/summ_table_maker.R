@@ -7,6 +7,10 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 
+# need this for correctly displaying latex output
+# \usepackage{lmodern}
+# \usepackage[T1]{fontenc}
+
 summ_table_maker <- function(df,
                              vars_,
                              var_types,
