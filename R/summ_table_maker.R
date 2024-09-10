@@ -14,7 +14,9 @@ summ_table_maker <- function(df,
                              strat_var=NULL,
                              cat_threshold=10,
                              show_null=F, # not sure it's worth it
-                             prec=2){
+                             prec=2,
+                             comparisons=F,
+                             var_new_names=NULL){
   starting_flag <- T
   rows_to_indent <- c()
   row_counter <- 1
@@ -53,6 +55,17 @@ summ_table_maker <- function(df,
     }
     var_type <- var_types[[var_]]
     sym_var <- sym(var_)
+
+    if (!base::missing(var_new_names) & var_ %in% names(var_new_names)) {
+      var_new_name <- var_new_names[[var_]]
+      sym_var_new_name <- sym(var_new_name)
+    }
+
+    else {
+      var_new_name <- var_
+      sym_var_new_name <- sym_var
+    }
+
     if (var_type %in% c("boolean", "dichotomous", "categorical")) {
 
       temp_df <- df %>%
@@ -98,14 +111,12 @@ summ_table_maker <- function(df,
                                            Characteristics==F~"No",
                                            .default=NA)) %>%
           #filter(Characteristics != F) %>%
-          filter(Characteristics != "No") %>%
-          mutate(Characteristics=glue("{Characteristics}_{var_}"))
+          filter(Characteristics != "No")
       }
 
       else if (var_type=="dichotomous"){
         temp_df <- temp_df %>%
-          filter(Characteristics != refs[[var_]]) %>%
-          mutate(Characteristics=glue("{Characteristics}_{var_}"))
+          filter(Characteristics != refs[[var_]])
       }
 
       else {
@@ -132,10 +143,10 @@ summ_table_maker <- function(df,
         rows_to_indent <- c(rows_to_indent, (row_counter+1):(row_counter+dim(temp_df)[1]-1))
 
         if (!base::missing(factors) & var_ %in% names(factors)) {
-          factors[[var_]] <- c(var_, factors[[var_]])
+          factors[[var_]] <- c(var_new_name, factors[[var_]])
         }
         if (!base::missing(labels) & var_ %in% names(labels)) {
-          labels[[var_]] <- c(var_, labels[[var_]])
+          labels[[var_]] <- c(var_new_name, labels[[var_]])
         }
       }
     }
@@ -164,7 +175,8 @@ summ_table_maker <- function(df,
 
         temp_df <- temp_df_strat %>%
           left_join(temp_df, by="Characteristics") %>%
-          rename(Total=Value)
+          rename(Total=Value) %>%
+          mutate(Characteristics=var_new_name)
       }
 
     }
@@ -184,6 +196,11 @@ summ_table_maker <- function(df,
                                         levels=factors[[var_]])) %>%
           arrange(Characteristics)
       }
+    }
+
+    if (var_type %in% c("dichotomous", "boolean")) {
+      temp_df <- temp_df %>%
+        mutate(Characteristics=glue("{var_new_name}-{Characteristics}"))
     }
 
     if (starting_flag) {

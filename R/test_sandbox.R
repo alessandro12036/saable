@@ -89,6 +89,8 @@ out_obj <- summ_table_maker(df, vars_=c("eta",
                             factors=list("stato_relazionale_"=c("Single",
                                                                 "Relazione esclusiva",
                                                                 "Relazione non esclusiva")),
-                            labels=list("stato_relazionale_"=c("A", "B", "C")))
+                            labels=list("stato_relazionale_"=c("A", "B", "C")),
+                            var_new_names = list("conoscenza_u_u_appropriata"="Conoscenza U=U appropriata",
+                                                 "eta_primo_rapporto"="Età al primo rapporto"))
 
 out_obj
