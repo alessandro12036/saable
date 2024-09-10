@@ -95,6 +95,7 @@ out_obj <- summ_table_maker(df, vars_=c("eta",
                                                  "eta"="Età"),
                             comparisons=T,
                             save_as_latex = T,
-                            file_name="test_table")
+                            file_name="test_table",
+                            table_package = "kable")
 
 out_obj

@@ -4,6 +4,8 @@
 library(glue)
 library(gt)
 library(tidyverse)
+library(knitr)
+library(kableExtra)
 
 summ_table_maker <- function(df,
                              vars_,
@@ -19,7 +21,9 @@ summ_table_maker <- function(df,
                              var_new_names=NULL,
                              save_as_latex=F,
                              file_path=".",
-                             file_name="summary_table"){
+                             file_name="summary_table",
+                             table_package="gt",
+                             missing_value_not="--"){
   starting_flag <- T
   rows_to_indent <- c()
   row_counter <- 1
@@ -166,7 +170,7 @@ summ_table_maker <- function(df,
             mutate(P=round(p_value, prec))
 
           temp_df <- temp_df %>%
-            mutate(P="")
+            mutate(P=missing_value_not)
         }
 
         temp_df <- first_row %>%
@@ -261,21 +265,37 @@ summ_table_maker <- function(df,
     }
   }
 
-  gt_summ <- summ_df %>%
-    gt() %>%
-    cols_align(columns="Characteristics",
-               align="left") %>%
-    tab_style(style=cell_text(indent = pct(10)),
-              location=cells_body(rows = rows_to_indent,
-                                  columns=c("Characteristics"))) %>%
-    tab_style(style=cell_text(align="left"),
-              location=list(cells_body(columns=`p-value`),
-                            cells_column_labels(columns=`p-value`)))
 
-  gtsave(gt_summ, glue("{file_path}/{file_name}.ltx"))
+  if (table_package == "gt") {
+    table_summ <- summ_df %>%
+      mutate_all(str_replace_all, ">=", "/geq") %>%
+      mutate_all(str_replace_all, "<=", "/leq") %>%
+      gt() %>%
+      cols_align(columns="Characteristics",
+                 align="left") %>%
+      tab_style(style=cell_text(indent = pct(10)),
+                location=cells_body(rows = rows_to_indent,
+                                    columns=c("Characteristics"))) %>%
+      tab_style(style=cell_text(align="left"),
+                location=list(cells_body(columns=`p-value`),
+                              cells_column_labels(columns=`p-value`)))
+
+    gtsave(table_summ, glue("{file_path}/{file_name}.ltx"))
+  }
+
+  else if (table_package=="kable") {
+    table_summ <- summ_df %>%
+      mutate_all(str_replace_all, ">=", "/geq") %>%
+      mutate_all(str_replace_all, "<=", "/leq") %>%
+      kable(format = "latex", booktabs = TRUE,
+            linesep="") %>%
+      add_indent(positions = rows_to_indent)
+
+    save_kable(table_summ, glue("{file_path}/{file_name}.tex"))
+  }
 
   return_obj <- list("tidy_df"=summ_df,
-                     "gt_summ"=gt_summ,
+                     "table_summ"=table_summ,
                      "rows_to_indent"=rows_to_indent,
                      "labels"=labels)
 }
