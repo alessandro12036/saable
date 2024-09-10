@@ -1,6 +1,6 @@
 # TODO: add comparison mechanism
 # TODO: add mean (sd) option for continuous
-# TODO: add way to clean labels
+
 library(glue)
 library(gt)
 library(tidyverse)
@@ -16,7 +16,10 @@ summ_table_maker <- function(df,
                              show_null=F, # not sure it's worth it
                              prec=2,
                              comparisons=F,
-                             var_new_names=NULL){
+                             var_new_names=NULL,
+                             save_as_latex=F,
+                             file_path=".",
+                             file_name="summary_table"){
   starting_flag <- T
   rows_to_indent <- c()
   row_counter <- 1
@@ -68,6 +71,12 @@ summ_table_maker <- function(df,
 
     if (var_type %in% c("boolean", "dichotomous", "categorical")) {
 
+      if (!base::missing(strat_var) & comparisons) {
+        temp_table <- table(df[[strat_var]], df[[var_]])
+        out_test <- chisq.test(temp_table)
+        p_value <- round(out_test$p.value, prec)
+      }
+
       temp_df <- df %>%
         group_by(!!sym_var) %>%
         summarise(n=n()) %>%
@@ -98,6 +107,11 @@ summ_table_maker <- function(df,
           left_join(temp_df, by="Characteristics") %>%
           rename(Total=Value) #%>%
         #rbind(tot_row)
+
+        if (!base::missing(strat_var) & comparisons) {
+          temp_df <- temp_df %>%
+            mutate(P=p_value)
+        }
       }
 
       if (!show_null) {
@@ -112,11 +126,21 @@ summ_table_maker <- function(df,
                                            .default=NA)) %>%
           #filter(Characteristics != F) %>%
           filter(Characteristics != "No")
+
+        if (!base::missing(strat_var) & comparisons) {
+          temp_df <- temp_df %>%
+            mutate(P=p_value)
+        }
       }
 
       else if (var_type=="dichotomous"){
         temp_df <- temp_df %>%
           filter(Characteristics != refs[[var_]])
+
+        if (!base::missing(strat_var) & comparisons) {
+          temp_df <- temp_df %>%
+            mutate(P=p_value)
+        }
       }
 
       else {
@@ -137,6 +161,14 @@ summ_table_maker <- function(df,
             relocate(Total, .after=last_col())
         }
 
+        if (!base::missing(strat_var) & comparisons) {
+          first_row <- first_row %>%
+            mutate(P=round(p_value, prec))
+
+          temp_df <- temp_df %>%
+            mutate(P="")
+        }
+
         temp_df <- first_row %>%
           rbind(temp_df)
 
@@ -152,6 +184,11 @@ summ_table_maker <- function(df,
     }
 
     else {
+
+      if (!base::missing(strat_var) & comparisons) {
+        out_test <- t.test(df[[var_]]~df[[strat_var]])
+        p_value <- round(out_test$p.value, prec)
+      }
 
       temp_df <- df %>%
         summarise(median_var=median(!!sym_var, na.rm=T),
@@ -179,6 +216,10 @@ summ_table_maker <- function(df,
           mutate(Characteristics=var_new_name)
       }
 
+      if (!base::missing(strat_var) & comparisons) {
+        temp_df <- temp_df %>%
+          mutate(P=p_value)
+      }
     }
     row_counter <- row_counter + dim(temp_df)[1]
 
@@ -203,6 +244,12 @@ summ_table_maker <- function(df,
         mutate(Characteristics=glue("{var_new_name} - {Characteristics}"))
     }
 
+    if (!base::missing(strat_var) & comparisons) {
+      temp_df <- temp_df %>%
+        relocate(P, .before=Total) %>%
+        rename(`p-value`=P)
+    }
+
     if (starting_flag) {
       summ_df <- temp_df
       starting_flag <- F
@@ -220,7 +267,12 @@ summ_table_maker <- function(df,
                align="left") %>%
     tab_style(style=cell_text(indent = pct(10)),
               location=cells_body(rows = rows_to_indent,
-                                  columns=c("Characteristics")))
+                                  columns=c("Characteristics"))) %>%
+    tab_style(style=cell_text(align="left"),
+              location=list(cells_body(columns=`p-value`),
+                            cells_column_labels(columns=`p-value`)))
+
+  gtsave(gt_summ, glue("{file_path}/{file_name}.ltx"))
 
   return_obj <- list("tidy_df"=summ_df,
                      "gt_summ"=gt_summ,
