@@ -121,7 +121,7 @@ summ_table_maker <- function(df,
 
       else {
 
-        first_row <- data.frame(temp_1=var_,
+        first_row <- data.frame(temp_1=var_new_name,
                                 temp_2="") %>%
           as_tibble()
         colnames(first_row) <- c("Characteristics", "Value")
@@ -200,7 +200,7 @@ summ_table_maker <- function(df,
 
     if (var_type %in% c("dichotomous", "boolean")) {
       temp_df <- temp_df %>%
-        mutate(Characteristics=glue("{var_new_name}-{Characteristics}"))
+        mutate(Characteristics=glue("{var_new_name} - {Characteristics}"))
     }
 
     if (starting_flag) {
