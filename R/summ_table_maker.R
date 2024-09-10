@@ -28,7 +28,8 @@ summ_table_maker <- function(df,
                              file_name="summary_table",
                              table_package="gt",
                              missing_value_not="--",
-                             gt_format="tex"){
+                             gt_format="tex",
+                             indent_size="0.5cm"){
   starting_flag <- T
   rows_to_indent <- c()
   row_counter <- 1
@@ -278,7 +279,7 @@ summ_table_maker <- function(df,
       gt() %>%
       cols_align(columns="Characteristics",
                  align="left") %>%
-      tab_style(style=cell_text(indent = pct(10)),
+      tab_style(style=cell_text(indent = indent_size),
                 location=cells_body(rows = rows_to_indent,
                                     columns=c("Characteristics")))
 
