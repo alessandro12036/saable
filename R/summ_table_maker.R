@@ -27,7 +27,8 @@ summ_table_maker <- function(df,
                              file_path=".",
                              file_name="summary_table",
                              table_package="gt",
-                             missing_value_not="--"){
+                             missing_value_not="--",
+                             gt_format="tex"){
   starting_flag <- T
   rows_to_indent <- c()
   row_counter <- 1
@@ -279,12 +280,17 @@ summ_table_maker <- function(df,
                  align="left") %>%
       tab_style(style=cell_text(indent = pct(10)),
                 location=cells_body(rows = rows_to_indent,
-                                    columns=c("Characteristics"))) %>%
-      tab_style(style=cell_text(align="left"),
-                location=list(cells_body(columns=`p-value`),
-                              cells_column_labels(columns=`p-value`)))
+                                    columns=c("Characteristics")))
 
-    gtsave(table_summ, glue("{file_path}/{file_name}.ltx"))
+    if (!base::missing(strat_var) & comparisons) {
+      table_summ <- table_summ %>%
+        tab_style(style=cell_text(align="left"),
+                  location=list(cells_body(columns=`p-value`),
+                                cells_column_labels(columns=`p-value`)))
+    }
+
+    table_summ %>%
+      gtsave(glue("{file_path}/{file_name}.{gt_format}"))
   }
 
   else if (table_package=="kable") {
