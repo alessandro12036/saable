@@ -136,21 +136,27 @@ summ_table_maker <- function(df,
                                            Characteristics==F~"No",
                                            .default=NA)) %>%
           #filter(Characteristics != F) %>%
-          filter(Characteristics != "No")
+          filter(is.na(Characteristics) | Characteristics != "No")
 
         if (!base::missing(strat_var) & comparisons) {
           temp_df <- temp_df %>%
             mutate(P=p_value)
         }
+        if (show_null) {
+          rows_to_indent <- c(rows_to_indent, row_counter+1)
+        }
       }
 
       else if (var_type=="dichotomous"){
         temp_df <- temp_df %>%
-          filter(Characteristics != refs[[var_]])
+          filter(is.na(Characteristics) | Characteristics != refs[[var_]])
 
         if (!base::missing(strat_var) & comparisons) {
           temp_df <- temp_df %>%
             mutate(P=p_value)
+        }
+        if (show_null) {
+          rows_to_indent <- c(rows_to_indent, row_counter+1)
         }
       }
 
