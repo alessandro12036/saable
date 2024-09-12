@@ -24,7 +24,7 @@ summ_table_maker <- function(df,
                              prec=2,
                              comparisons=F,
                              var_new_names=NULL,
-                             save_as_latex=F,
+                             save_table=F,
                              file_path=".",
                              file_name="summary_table",
                              table_package="gt",
@@ -205,7 +205,7 @@ summ_table_maker <- function(df,
         summarise(median_var=median(!!sym_var, na.rm=T),
                   low_quart=quantile(!!sym_var, 0.25, na.rm=T),
                   upper_quart=quantile(!!sym_var, 0.75, na.rm=T)) %>%
-        mutate(Value=glue("{median_var} [{low_quart}-{upper_quart}]"),
+        mutate(Value=glue("{round(median_var, prec)} [{round(low_quart, prec)}-{round(upper_quart, prec)}]"),
                Characteristics=var_) %>%
         select(Characteristics, Value)
 
@@ -215,7 +215,7 @@ summ_table_maker <- function(df,
           summarise(median_var=median(!!sym_var, na.rm=T),
                     low_quart=quantile(!!sym_var, 0.25, na.rm=T),
                     upper_quart=quantile(!!sym_var, 0.75, na.rm=T)) %>%
-          mutate(Value=glue("{median_var} [{low_quart}-{upper_quart}]"),
+          mutate(Value=glue("{round(median_var, prec)} [{round(low_quart, prec)}-{round(upper_quart, prec)}]"),
                  Characteristics=var_) %>%
           select(Characteristics, Value, !!sym_strat_var) %>%
           pivot_wider(names_from=!!sym_strat_var,
@@ -291,11 +291,14 @@ summ_table_maker <- function(df,
                                 cells_column_labels(columns=`p-value`)))
     }
 
-    table_summ %>%
-      gtsave(glue("{file_path}/{file_name}.{gt_format}"))
+    if (save_table) {
+      table_summ %>%
+        gtsave(glue("{file_path}/{file_name}.{gt_format}"))
+    }
   }
 
   else if (table_package=="kable") {
+    print(glue("Creating table with {table_package}"))
     table_summ <- summ_df %>%
       mutate_all(str_replace_all, ">=", "/geq") %>%
       mutate_all(str_replace_all, "<=", "/leq") %>%
@@ -303,7 +306,9 @@ summ_table_maker <- function(df,
             linesep="") %>%
       add_indent(positions = rows_to_indent)
 
-    save_kable(table_summ, glue("{file_path}/{file_name}.tex"))
+    if (save_table) {
+      save_kable(table_summ, glue("{file_path}/{file_name}.tex"))
+    }
   }
 
   return_obj <- list("tidy_df"=summ_df,
