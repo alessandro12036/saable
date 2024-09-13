@@ -42,7 +42,7 @@ summ_table_maker <- function(df,
     sym_strat_var <- sym(strat_var)
     sym_strat_type <- get_var_type(df, sym_strat_var)
 
-    # just to get consistent logical booleans
+    # if stratification needed set up strat_var and total column and row
     if (sym_strat_type=="boolean") {
       df <- df %>%
         mutate(!!sym_strat_var:=as.logical(!!sym_strat_var)) %>%
@@ -62,6 +62,16 @@ summ_table_maker <- function(df,
       mutate(Characteristics="Totals")
   }
 
+  if (base::missing(factors)) {
+    factors <- vector(mode="list", length=length(vars_))
+    names(factors) <- vars_
+  }
+
+  if (base::missing(labels)) {
+    labels <- vector(mode="list", length=length(vars_))
+    names(labels) <- vars_
+  }
+
   for (var_ in vars_) {
     print(var_)
     if (!var_ %in% names(var_types)) {
@@ -70,24 +80,47 @@ summ_table_maker <- function(df,
     var_type <- var_types[[var_]]
     sym_var <- sym(var_)
 
+    # take new names if provided otherwise use current names
     if (!base::missing(var_new_names) & var_ %in% names(var_new_names)) {
       var_new_name <- var_new_names[[var_]]
       sym_var_new_name <- sym(var_new_name)
     }
-
     else {
       var_new_name <- var_
       sym_var_new_name <- sym_var
     }
 
+    if (is.null(factors[[var_]]) | !(var_ %in% names(factors))) {
+      if (is.factor(df[[var_]])) {
+        factors[[var_]] <- levels(df[[var_]])
+      }
+      else {
+        factors[[var_]] <- df%>%filter(!is.na(!!sym_var)) %>% distinct(!!sym_var) %>% pull()
+      }
+    }
+
+    if (is.null(labels[[var_]]) | !(var_ %in% names(labels))) {
+      if (is.factor(df[[var_]])) {
+        labels[[var_]] <- levels(df[[var_]])
+      }
+      else {
+        labels[[var_]] <- df%>%filter(!is.na(!!sym_var)) %>% distinct(!!sym_var) %>% pull()
+      }
+    }
+
+    factors[[var_]] <- c(factors[[var_]], "Missing")
+    labels[[var_]] <- c(labels[[var_]], "Missing")
+
     if (var_type %in% c("boolean", "dichotomous", "categorical")) {
 
+      # get p-values if comparison is on
       if (!base::missing(strat_var) & comparisons) {
         temp_table <- table(df[[strat_var]], df[[var_]])
         out_test <- chisq.test(temp_table)
         p_value <- round(out_test$p.value, prec)
       }
 
+      # the column with overall data is made regardless of whether stratification is needed
       temp_df <- df %>%
         group_by(!!sym_var) %>%
         summarise(n=n()) %>%
@@ -99,6 +132,7 @@ summ_table_maker <- function(df,
         rename(Characteristics=!!sym_var,
                Value=label)
 
+      # stratification
       if (!base::missing(strat_var)) {
         temp_df_strat <- df %>%
           group_by(!!sym_strat_var, !!sym_var) %>%
@@ -129,14 +163,24 @@ summ_table_maker <- function(df,
         temp_df <- temp_df %>%
           filter(Characteristics!="NA")
       }
+
+      else if (var_type!="boolean") {
+        temp_df <- temp_df %>%
+          mutate(Characteristics=factor(Characteristics, levels=factors[[var_]], labels=factors[[var_]],
+                                        exclude=NULL))
+      }
+
       if (var_type=="boolean") {
         temp_df <- temp_df %>%
           mutate(Characteristics = as.logical(Characteristics)) %>%
-          mutate(Characteristics=case_when(Characteristics~"Yes",
-                                           Characteristics==F~"No",
-                                           .default=NA)) %>%
+          mutate(Characteristics=case_when(is.na(Characteristics)~"Missing",
+                                           Characteristics~"Yes",
+                                           Characteristics==F~"No")) %>%
           #filter(Characteristics != F) %>%
-          filter(is.na(Characteristics) | Characteristics != "No")
+          filter(Characteristics != "No")
+
+        factors[[var_]] <- c("Yes", "No", "Missing")
+        labels[[var_]] <- c("Yes", "No", "Missing")
 
         if (!base::missing(strat_var) & comparisons) {
           temp_df <- temp_df %>%
@@ -149,7 +193,7 @@ summ_table_maker <- function(df,
 
       else if (var_type=="dichotomous"){
         temp_df <- temp_df %>%
-          filter(is.na(Characteristics) | Characteristics != refs[[var_]])
+          filter(Characteristics != refs[[var_]])
 
         if (!base::missing(strat_var) & comparisons) {
           temp_df <- temp_df %>%
@@ -191,12 +235,12 @@ summ_table_maker <- function(df,
 
         rows_to_indent <- c(rows_to_indent, (row_counter+1):(row_counter+dim(temp_df)[1]-1))
 
-        if (!base::missing(factors) & var_ %in% names(factors)) {
-          factors[[var_]] <- c(var_new_name, factors[[var_]])
-        }
-        if (!base::missing(labels) & var_ %in% names(labels)) {
-          labels[[var_]] <- c(var_new_name, labels[[var_]])
-        }
+        #if (!base::missing(factors) & var_ %in% names(factors)) {
+        factors[[var_]] <- c(var_new_name, factors[[var_]])
+        #}
+        #if (!base::missing(labels) & var_ %in% names(labels)) {
+        labels[[var_]] <- c(var_new_name, labels[[var_]])
+        #}
       }
     }
 
@@ -240,21 +284,23 @@ summ_table_maker <- function(df,
     }
     row_counter <- row_counter + dim(temp_df)[1]
 
-    if (!base::missing(factors) & var_ %in% names(factors)) {
-      if (!base::missing(labels) & var_ %in% names(labels)) {
-        temp_df <- temp_df %>%
-          mutate(Characteristics=factor(Characteristics,
-                                        levels=factors[[var_]],
-                                        labels=labels[[var_]])) %>%
-          arrange(Characteristics)
-      }
-      else {
-        temp_df <- temp_df %>%
-          mutate(Characteristics=factor(Characteristics,
-                                        levels=factors[[var_]])) %>%
-          arrange(Characteristics)
-      }
+    #if (!base::missing(factors) & var_ %in% names(factors)) {
+      #if (!base::missing(labels) & var_ %in% names(labels)) {
+    if (var_type %in% c("boolean", "dichotomous", "categorical")) {
+      temp_df <- temp_df %>%
+        mutate(Characteristics=factor(Characteristics,
+                                      levels=factors[[var_]],
+                                      labels=labels[[var_]])) %>%
+        arrange(Characteristics)
     }
+      #}
+      #else {
+      #  temp_df <- temp_df %>%
+      #    mutate(Characteristics=factor(Characteristics,
+      #                                  levels=factors[[var_]])) %>%
+      #    arrange(Characteristics)
+      #}
+    #}
 
     if (var_type %in% c("dichotomous", "boolean")) {
       temp_df <- temp_df %>%
@@ -303,7 +349,7 @@ summ_table_maker <- function(df,
     }
   }
 
-  else if (table_package=="kable") {
+else if (table_package=="kable") {
     print(glue("Creating table with {table_package}"))
     table_summ <- summ_df %>%
       mutate_all(str_replace_all, ">=", "/geq") %>%
@@ -320,6 +366,7 @@ summ_table_maker <- function(df,
   return_obj <- list("tidy_df"=summ_df,
                      "table_summ"=table_summ,
                      "rows_to_indent"=rows_to_indent,
-                     "labels"=labels)
+                     "labels"=labels,
+                     "factors"=factors)
 }
 
