@@ -49,7 +49,7 @@ run_univariables <- function(df,
     else {
       temp_out_df <- temp_out_df %>%
         mutate(Variable=var_names) %>%
-        mutate(Variable=sapply(Variable, FUN=function(x) str_match(x, glue("{var_}(.*)"))[2])) %>%  # leaves only factor as the name
+        #mutate(Variable=sapply(Variable, FUN=function(x) str_match(x, glue("{var_}(.*)"))[2])) %>%  # leaves only factor as the name
         relocate(Variable, 1)
     }
 
